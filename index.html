@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attendance App</title>
+  <style>
+    .button-container {
+      margin-top: 10px;
+    }
+    .button-container button {
+      margin-right: 10px;
+    }
+    #coordinates {
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      background-color: #f9f9f9;
+    }
+  </style>
+</head>
+<body>
+  <h2>Attendance App</h2>
+
+  <div class="button-container">
+    <button onclick="setCorner(1)">Set Corner 1</button>
+    <button onclick="setCorner(2)">Set Corner 2</button>
+    <button onclick="setCorner(3)">Set Corner 3</button>
+    <button onclick="setCorner(4)">Set Corner 4</button>
+    <button onclick="setStudentLocation()">Set Student Location</button>
+    <button onclick="checkAttendance()">Check Attendance</button>
+  </div>
+
+  <div id="coordinates">
+    <h3>Coordinates:</h3>
+    <p id="corner1"></p>
+    <p id="corner2"></p>
+    <p id="corner3"></p>
+    <p id="corner4"></p>
+    <p id="studentLocation"></p>
+  </div>
+
+  <script>
+    // Array to store room coordinates (corners)
+    let roomCoordinates = [];
+
+    // Function to capture current location and set corner coordinates
+    function setCorner(cornerNumber) {
+      navigator.geolocation.getCurrentPosition(function(position) {
+        const lat = position.coords.latitude.toFixed(6);
+        const lng = position.coords.longitude.toFixed(6);
+        
+        // Store coordinates in roomCoordinates array
+        roomCoordinates[cornerNumber - 1] = { lat, lng };
+
+        // Display coordinates
+        document.getElementById(`corner${cornerNumber}`).innerText = `Corner ${cornerNumber}: ${lat}, ${lng}`;
+        alert(`Corner ${cornerNumber} set: ${lat}, ${lng}`);
+      }, function(error) {
+        alert(`Error getting location: ${error.message}`);
+      });
+    }
+
+    // Function to capture current location and set student's location
+    let studentLocation = null;
+    function setStudentLocation() {
+      navigator.geolocation.getCurrentPosition(function(position) {
+        const lat = position.coords.latitude.toFixed(6);
+        const lng = position.coords.longitude.toFixed(6);
+
+        // Store student location
+        studentLocation = { lat, lng };
+
+        // Display coordinates
+        document.getElementById('studentLocation').innerText = `Student Location: ${lat}, ${lng}`;
+        alert(`Student location set: ${lat}, ${lng}`);
+      }, function(error) {
+        alert(`Error getting location: ${error.message}`);
+      });
+    }
+
+    // Function to check if student's location is inside the polygon
+    function checkAttendance() {
+      if (!studentLocation) {
+        alert('Set student location first.');
+        return;
+      }
+
+      if (roomCoordinates.length !== 4 || roomCoordinates.some(coord => !coord)) {
+        alert('Set all 4 corners of the room first.');
+        return;
+      }
+
+      const isInRoom = isPointInPolygon(studentLocation, roomCoordinates);
+
+      if (isInRoom) {
+        alert('Student is inside the room. Marking attendance...');
+        // Implement attendance marking logic here
+      } else {
+        alert('Student is outside the room.');
+        // Handle outside of the classroom scenario
+      }
+    }
+
+    // Function to check if a point (student's location) is inside the polygon
+    function isPointInPolygon(point, polygon) {
+      const x = point.lat, y = point.lng;
+      let inside = false;
+
+      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const xi = polygon[i].lat, yi = polygon[i].lng;
+        const xj = polygon[j].lat, yj = polygon[j].lng;
+
+        const intersect = ((yi > y) !== (yj > y)) &&
+          (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+
+        if (intersect) inside = !inside;
+      }
+
+      return inside;
+    }
+  </script>
+</body>
+</html>
