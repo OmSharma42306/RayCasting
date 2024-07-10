@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -118,6 +118,188 @@
       }
 
       return inside;
+    }
+  </script>
+</body>
+</html>
+ -->
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attendance App with Polygon Visualization</title>
+  <style>
+    .button-container {
+      margin-top: 10px;
+    }
+    .button-container button {
+      margin-right: 10px;
+    }
+    #coordinates {
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      background-color: #f9f9f9;
+    }
+    #mapCanvas {
+      border: 1px solid black;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Attendance App with Polygon Visualization</h2>
+
+  <div class="button-container">
+    <button onclick="setCorner(1)">Set Corner 1</button>
+    <button onclick="setCorner(2)">Set Corner 2</button>
+    <button onclick="setCorner(3)">Set Corner 3</button>
+    <button onclick="setCorner(4)">Set Corner 4</button>
+    <button onclick="setStudentLocation()">Set Student Location</button>
+    <button onclick="checkAttendance()">Check Attendance</button>
+  </div>
+
+  <div id="coordinates">
+    <h3>Coordinates:</h3>
+    <p id="corner1"></p>
+    <p id="corner2"></p>
+    <p id="corner3"></p>
+    <p id="corner4"></p>
+    <p id="studentLocation"></p>
+  </div>
+
+  <canvas id="mapCanvas" width="500" height="500"></canvas>
+
+  <script>
+    let roomCoordinates = [
+      { lat: 0, lng: 0 },
+      { lat: 0, lng: 0 },
+      { lat: 0, lng: 0 },
+      { lat: 0, lng: 0 }
+    ];
+    let studentLocation = null;
+
+    function setCorner(cornerNumber) {
+      navigator.geolocation.getCurrentPosition(function(position) {
+        const lat = position.coords.latitude.toFixed(6);
+        const lng = position.coords.longitude.toFixed(6);
+        
+        roomCoordinates[cornerNumber - 1] = { lat: parseFloat(lat), lng: parseFloat(lng) };
+
+        document.getElementById(`corner${cornerNumber}`).innerText = `Corner ${cornerNumber}: ${lat}, ${lng}`;
+        alert(`Corner ${cornerNumber} set: ${lat}, ${lng}`);
+
+        drawPolygon();
+      }, function(error) {
+        alert(`Error getting location: ${error.message}`);
+      });
+    }
+
+    function setStudentLocation() {
+      navigator.geolocation.getCurrentPosition(function(position) {
+        const lat = position.coords.latitude.toFixed(6);
+        const lng = position.coords.longitude.toFixed(6);
+
+        studentLocation = { lat: parseFloat(lat), lng: parseFloat(lng) };
+
+        document.getElementById('studentLocation').innerText = `Student Location: ${lat}, ${lng}`;
+        alert(`Student location set: ${lat}, ${lng}`);
+
+        drawPolygon();
+      }, function(error) {
+        alert(`Error getting location: ${error.message}`);
+      });
+    }
+
+    function checkAttendance() {
+      if (!studentLocation) {
+        alert('Set student location first.');
+        return;
+      }
+
+      if (roomCoordinates.length !== 4 || roomCoordinates.some(coord => !coord)) {
+        alert('Set all 4 corners of the room first.');
+        return;
+      }
+
+      const isInRoom = isPointInPolygon(studentLocation, roomCoordinates);
+
+      if (isInRoom) {
+        alert('Student is inside the room. Marking attendance...');
+      } else {
+        alert('Student is outside the room.');
+      }
+    }
+
+    function isPointInPolygon(point, polygon) {
+      const x = point.lat, y = point.lng;
+      let wn = 0;
+
+      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const xi = polygon[i].lat, yi = polygon[i].lng;
+        const xj = polygon[j].lat, yj = polygon[j].lng;
+
+        if (yi <= y) {
+          if (yj > y && isLeft([xi, yi], [xj, yj], [x, y]) > 0) {
+            wn++;
+          }
+        } else {
+          if (yj <= y && isLeft([xi, yi], [xj, yj], [x, y]) < 0) {
+            wn--;
+          }
+        }
+      }
+
+      return wn !== 0;
+    }
+
+    function isLeft(p0, p1, p2) {
+      return (p1[0] - p0[0]) * (p2[1] - p0[1]) - (p2[0] - p0[0]) * (p1[1] - p0[1]);
+    }
+
+    function drawPolygon() {
+      const canvas = document.getElementById('mapCanvas');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw a square as default polygon
+      const squareSize = 200; // Size of the square in pixels
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+
+      ctx.beginPath();
+      ctx.moveTo(centerX - squareSize / 2, centerY - squareSize / 2);
+      ctx.lineTo(centerX + squareSize / 2, centerY - squareSize / 2);
+      ctx.lineTo(centerX + squareSize / 2, centerY + squareSize / 2);
+      ctx.lineTo(centerX - squareSize / 2, centerY + squareSize / 2);
+      ctx.closePath();
+      ctx.stroke();
+
+      if (roomCoordinates.every(coord => coord.lat !== 0 && coord.lng !== 0)) {
+        ctx.beginPath();
+        roomCoordinates.forEach((coord, index) => {
+          const x = (coord.lng + 180) * (canvas.width / 360);
+          const y = (90 - coord.lat) * (canvas.height / 180);
+          if (index === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        });
+        ctx.closePath();
+        ctx.stroke();
+      }
+
+      if (studentLocation) {
+        const studentX = (studentLocation.lng + 180) * (canvas.width / 360);
+        const studentY = (90 - studentLocation.lat) * (canvas.height / 180);
+        ctx.beginPath();
+        ctx.arc(studentX, studentY, 5, 0, 2 * Math.PI);
+        ctx.fillStyle = 'red';
+        ctx.fill();
+        ctx.stroke();
+      }
     }
   </script>
 </body>
